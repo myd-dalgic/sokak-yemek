@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>MYD:YEMEK</title><style>html,body{margin:0;height:100%;background:#140c08;color:#f6e7d0;font:16px system-ui,sans-serif;overflow:hidden}canvas{position:fixed;inset:0;width:100%;height:100%}
+#m{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#140c08f2;z-index:5;text-align:center;padding:24px}#m h1{font-size:44px;margin:0 0 8px}#m p{max-width:440px;opacity:.85;line-height:1.55}
+button{background:#ff9a3c;color:#1a0d05;border:0;border-radius:10px;padding:13px 20px;font:inherit;margin:4px}button.s{background:#3a2314;color:#f6e7d0}button:disabled{opacity:.4}
+</style></head><body><canvas id="c"></canvas>
+<div id="m"><div><h1>MYD:YEMEK</h1><p id="mp">Sokak lezzetleri VR’da. Sol çubuk: yürü, sağ çubuk: dön. Tetik: tut ve uygula; elini hareket ettirerek kes, sür, dök. Hazır olunca yeşil Servis düğmesine dokun.</p><button id="vr" disabled>VR’a gir</button><button id="dk" class="s">Masaüstü önizleme</button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,$=s=>document.querySelector(s);
+const R=new T.WebGLRenderer({canvas:$('#c'),antialias:true});R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=1.15;R.outputEncoding=T.sRGBEncoding;
+const S=new T.Scene();S.background=new T.Color(0x140c08);S.fog=new T.FogExp2(0x140c08,.03);
+const C=new T.PerspectiveCamera(55,1,.1,120),rig=new T.Group();rig.scale.setScalar(2.2);rig.position.set(0,-1.98,5);S.add(rig);rig.add(C);C.position.y=1.6;C.add(new T.PointLight(0xffd9a8,.6,5));R.xr.enabled=true;R.xr.setReferenceSpaceType('local-floor');
+function rs(){if(R.xr.isPresenting)return;R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()}addEventListener('resize',rs);rs();
+/* ---------- materials ---------- */
+function tex(f,rep){const c=document.createElement('canvas');c.width=c.height=256;f(c.getContext('2d'));const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.encoding=T.sRGBEncoding;if(rep)t.repeat.set(rep,rep);t.anisotropy=4;return t}
+const spk=(g,col,n,s)=>{for(let i=0;i<n;i++){g.fillStyle=col.replace('A',Math.random()*.3);g.fillRect(Math.random()*256,Math.random()*256,Math.random()*s+1,Math.random()*s+1)}};
+const mat=(c,r=.6,m=0,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:m},o));
+const meatM=mat(0xffffff,.55,0,{map:tex(g=>{g.fillStyle='#7a431f';g.fillRect(0,0,256,256);spk(g,'rgba(40,18,6,A)',1500,6);spk(g,'rgba(240,190,120,A)',900,4);g.strokeStyle='rgba(235,190,120,.3)';for(let i=0;i<40;i++){g.beginPath();g.moveTo(Math.random()*256,0);g.lineTo(Math.random()*256,256);g.stroke()}},2)});
+const steel=mat(0xb8bec6,.32,.85),dark=mat(0x2a2d31,.5,.7),breadM=mat(0xe2b877,.85),ps=steel.clone();ps.side=T.DoubleSide;
+const wood=mat(0xffffff,.8,0,{map:tex(g=>{g.fillStyle='#8a5a30';g.fillRect(0,0,256,256);for(let i=0;i<60;i++){g.fillStyle=`rgba(50,25,8,${Math.random()*.25})`;g.fillRect(0,Math.random()*256,256,Math.random()*3+1)}},6)});
+function mk(geo,m,x,y,z,par){const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;(par||S).add(o);return o}
+const BX=(a,b,c)=>new T.BoxGeometry(a,b,c),CY=(a,b,c,d,e,f)=>new T.CylinderGeometry(a,b,c,d||24,1,e,0,f||6.2832),SP=(r,n)=>new T.SphereGeometry(r,n||10,8);
+/* ---------- environment ---------- */
+S.add(new T.HemisphereLight(0xffd7a8,0x1a0f08,.6));
+const sp=new T.SpotLight(0xffe2b8,1.7,45,.9,.6);sp.position.set(0,9,5);sp.castShadow=true;sp.shadow.mapSize.set(1024,1024);sp.shadow.bias=-.0004;S.add(sp,sp.target);
+const cob=mat(0xffffff,.35,.2,{map:tex(g=>{g.fillStyle='#1d1917';g.fillRect(0,0,256,256);for(let y=0;y<8;y++)for(let x=0;x<8;x++){g.fillStyle=`hsl(25,8%,${16+Math.random()*10}%)`;g.fillRect(x*32+(y%2)*16+2,y*32+2,28,28)}},24)});mk(BX(46,1.98,5.5),wood,16,-.99,.3);mk(BX(70,14,.3),mat(0x2c1a10,.9),16,5,-9);const fl0=mk(new T.PlaneGeometry(120,60),cob,16,-1.98,0);fl0.rotation.x=-Math.PI/2;fl0.castShadow=false;
+for(let x=-6;x<46;x+=2.2){const b=new T.Mesh(SP(.13,8),new T.MeshBasicMaterial({color:0xffc46b}));b.position.set(x,5.6+Math.sin(x)*.15,1);S.add(b)}
+/* steam */
+const sc=document.createElement('canvas');sc.width=sc.height=64;{const g=sc.getContext('2d'),r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(255,255,255,.55)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,64,64)}
+const stT=new T.CanvasTexture(sc),stm=[];
+function steam(par,x,y,z,n){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3),3));const p=new T.Points(geo,new T.PointsMaterial({size:.8,map:stT,transparent:true,opacity:.3,depthWrite:false}));p.userData={x,y,z,n};p.frustumCulled=false;par.add(p);stm.push(p)}
+/* ---------- audio (fully synthesized) ---------- */
+let A,NB,M,MG,hv,sz,mus=1;const amb={siz:0};
+function nz(type,f,q){const s=A.createBufferSource();s.buffer=NB;s.loop=true;const fl=A.createBiquadFilter(),g=A.createGain();fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.value=0;s.connect(fl);fl.connect(g);g.connect(M);s.start();return{fl,g}}
+function burst(type,f,q,v,dur){if(!A)return;const t=A.currentTime,s=A.createBufferSource(),fl=A.createBiquadFilter(),g=A.createGain();s.buffer=NB;fl.type=type;fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(fl);fl.connect(g);g.connect(M);s.start(t,Math.random());s.stop(t+dur+.05)}
+function tone(f,v,dur,type,f2,dst){if(!A)return;const t=A.currentTime,o=A.createOscillator(),g=A.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dst||M);o.start(t);o.stop(t+dur)}
+const plc=()=>{tone(160,.18,.09,'triangle',90);burst('lowpass',700,1,.12,.07)},
+spr=()=>burst('highpass',7000,1,.08,.02),
+bub=()=>{const f=260+Math.random()*260;tone(f,.05,.09,'sine',f*2.2)},
+sqz=()=>{tone(240,.1,.22,'sine',150);burst('bandpass',2600,2,.12,.15)},
+prs=()=>{tone(75,.5,.3,'sawtooth',38);burst('highpass',5000,.5,.3,.25)},
+ding=()=>tone(880,.06,.12,'triangle'),
+chime=()=>[293.66,369.99,440,587.33].forEach((f,i)=>setTimeout(()=>{tone(f,.12,.6,'triangle');tone(f*2,.03,.4,'sine')},i*120));
+function ai(){A=new(window.AudioContext||window.webkitAudioContext)();const n=A.sampleRate*2;NB=A.createBuffer(1,n,A.sampleRate);const d=NB.getChannelData(0);let b=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b=(b+.02*w)/1.02;d[i]=w*.6+b*4}
+M=A.createGain();M.gain.value=.9;M.connect(A.destination);MG=A.createGain();MG.gain.value=.5;MG.connect(M);
+hv=nz('bandpass',800,1);sz=nz('highpass',5200,.3);const st=nz('lowpass',450,.4);st.g.gain.value=.05;
+const seq=[0,2,3,4,3,2,1,0,2,4,5,4,3,2,3,2],sc=[293.66,311.13,369.99,392,440,466.16,523.25,587.33];let k=0;
+setInterval(()=>{if(!mus)return;const f=sc[seq[k++%16]];tone(f,.07,1.1,'triangle',0,MG);tone(f*2,.025,.5,'sine',0,MG);if(k%8==1)tone(146.83,.08,3,'sine',0,MG)},520)}
+/* ---------- tools (held in the right controller) ---------- */
+const glove=mat(0x5fb7d6,.7),tools=[];let LF;
+const tl=(tilt,f)=>{const t=new T.Group();t.position.set(0,0,-.05);t.rotation.x=tilt;t.scale.setScalar(.42);t.visible=false;f(t);return t};
+tools[0]=tl(-.3,t=>{mk(BX(.03,.14,1.1),steel,0,0,-.55,t);mk(BX(.06,.06,.3),dark,0,0,.1,t)});
+tools[1]=tl(-.3,t=>{mk(BX(.03,.1,.6),steel,0,0,-.3,t);mk(BX(.06,.06,.25),wood,0,0,.1,t)});
+tools[2]=tl(-.1,t=>{mk(CY(.018,.018,1,8),steel,0,0,-.4,t).rotation.x=Math.PI/2;mk(new T.SphereGeometry(.17,16,10,0,6.283,1.5708,1.5708),ps,0,-.02,-.95,t);LF=mk(new T.CircleGeometry(.15,16),mat(0xe09a2a,.2),0,-.06,-.95,t);LF.rotation.x=-Math.PI/2;LF.visible=false});
+tools[3]=tl(-.2,t=>{mk(CY(.018,.018,.9,8),steel,0,0,-.4,t).rotation.x=Math.PI/2;mk(new T.SphereGeometry(.2,16,10,0,6.283,1.5708,1.5708),ps,0,-.02,-.9,t).scale.set(1,.7,1.3)});
+tools[4]=null;
+/* ---------- stations ---------- */
+const ST=[];
+function setN(a,p,snd){const n=Math.ceil(p*a.length-1e-6),pv=a.n||0;a.forEach((m,i)=>m.visible=i<n);if(n>pv&&snd)snd();a.n=n}
+function mkSt(name,build){const g=new T.Group();g.position.set(ST.length*8,0,.6);S.add(g);const s=Object.assign({n:name,g,i:0,done:0,u(){},reset(){this.steps.forEach(x=>{x.p=0;x.d=0;x.f(0,0,0,1)});this.i=0;this.done=0}},build(g));s.steps.forEach(x=>{x.p=0;x.d=0});ST.push(s)}
+/* 1 DÖNER */
+mkSt('Döner',g=>{
+ const cone=new T.Group();cone.position.set(0,1.95,-1.4);g.add(cone);
+ const pts=[new T.Vector2(.02,-1.25)];for(let i=0;i<=22;i++){const u=i/22;pts.push(new T.Vector2(.32+.72*Math.pow(u,.8)+Math.sin(i*2.1)*.025,-1.2+u*2.5))}pts.push(new T.Vector2(.02,1.32));
+ mk(new T.LatheGeometry(pts,48),meatM,0,0,0,cone);mk(CY(.04,.04,3.2,8),steel,0,0,0,cone);mk(CY(.6,.7,.3),dark,0,.45,-1.4,g);
+ mk(BX(.12,2.8,1.8),new T.MeshBasicMaterial({color:0xff7a28}),1.5,1.95,-1.4,g);
+ const L=new T.PointLight(0xff7a28,1.6,7);L.position.set(1.1,2,-.8);g.add(L);
+ mk(BX(3.4,.1,1.6),steel,0,.08,.7,g);steam(g,0,1.2,.3,18);
+ const bun=mk(CY(.95,.95,.14,28),breadM,2.4,.17,1.6,g);bun.scale.z=.6;
+ const fill=[];for(let i=0;i<10;i++){const m=mk(BX(.5,.05,.2),meatM,2.4+(i%5-2)*.3,.28+(i>4?.05:0),1.6+(i>4?.12:-.1),g);m.visible=false;m.rotation.y=Math.random()-.5;fill.push(m)}
+ const sl=[];let ac=0;
+ function spawn(th){const m=mk(BX(.7+Math.random()*.3,th,.3),meatM,(Math.random()-.5)*.5,2.9-Math.random()*.8,-.4,g);m.rotation.set(0,(Math.random()-.5)*.8,(Math.random()-.5)*.4);m.userData={vy:0,f:1,ty:.17+Math.min(sl.length,14)*.012+Math.random()*.01,x:(Math.random()-.5)*1.5,z:.55+Math.random()*.3};sl.push(m);burst('highpass',3500+th*20000,.7,.2+th*3,.12);burst('bandpass',1200,3,.14,.05)}
+ return{u(dt){cone.rotation.y+=dt*.9;amb.siz=.3;sl.forEach(m=>{const d=m.userData;if(d.f){d.vy-=14*dt;m.position.y+=d.vy*dt;m.position.x+=(d.x-m.position.x)*dt*6;m.position.z+=(d.z-m.position.z)*dt*6;if(m.position.y<=d.ty){m.position.y=d.ty;d.f=0;burst('lowpass',500,1,.22,.08)}}})},
+ steps:[{t:'Bıçağı yukarıdan aşağı sürükle',h:'Yavaş sürüklersen ince, hızlı sürüklersen kalın dilim düşer',m:'d',k:2.4,dir:1,f(p,dp,sp,r){if(r){sl.forEach(m=>g.remove(m));sl.length=0;ac=0;cone.scale.set(1,1,1);return}ac+=dp;const th=.02+Math.min(sp/3,1)*.05;while(ac>.075){ac-=.075;spawn(th)}cone.scale.set(1-.2*p,1,1-.2*p)}},
+ {t:'Etleri ekmeğe doldur',h:'Basılı tut',m:'h',k:1.6,v:()=>['lowpass',900,1,.06],f:p=>setN(fill,p,plc)}]}});
+/* 2 TOST */
+mkSt('Tost',g=>{
+ mk(BX(3.4,.5,2.4),dark,0,.25,-.6,g);mk(BX(2.8,.08,1.9),mat(0x1c1f24,.4,.9),0,.54,-.6,g);
+ for(let i=0;i<8;i++)mk(BX(2.8,.05,.09),steel,0,.6,-1.4+i*.24,g);
+ const b1=mk(BX(1.5,.14,1.5),breadM,0,.69,-.6,g);
+ const bt=mk(new T.PlaneGeometry(1.4,1.4),mat(0xffe27a,.2,0,{transparent:true,opacity:0}),0,.77,-.6,g);bt.rotation.x=-Math.PI/2;
+ const ch=[],su=[];
+ for(let i=0;i<3;i++)ch.push(mk(BX(1.45,.03,.5),mat(0xf3b83a,.35),0,.8+i*.02,-1.05+i*.45,g));
+ for(let i=0;i<8;i++)su.push(mk(CY(.17,.17,.035,18),mat(0x80281b,.5),-.5+(i%4)*.33,.86,-.9+(i>3?.5:0),g));
+ ch.concat(su).forEach(m=>m.visible=false);
+ const tc=document.createElement('canvas');tc.width=tc.height=256;const tg=tc.getContext('2d'),tt=new T.CanvasTexture(tc);tt.encoding=T.sRGBEncoding;
+ const dr=p=>{tg.fillStyle=`rgb(${226-p*60},${184-p*85},${119-p*75})`;tg.fillRect(0,0,256,256);tg.fillStyle=`rgba(50,22,6,${p*.85})`;for(let i=0;i<7;i++)tg.fillRect(0,18+i*36,256,14);tt.needsUpdate=true};dr(0);
+ const top=mk(BX(1.5,.14,1.5),mat(0xffffff,.8,0,{map:tt}),0,2,-.6,g);top.visible=false;
+ const pv=new T.Group();pv.position.set(0,1.03,-1.8);g.add(pv);
+ mk(BX(3.3,.32,2.4),dark,0,.16,1.2,pv);mk(CY(.07,.07,1,10),steel,0,.3,2.5,pv).rotation.z=Math.PI/2;pv.rotation.x=1;steam(g,0,.9,-.6,14);
+ let cl=0;
+ return{u(){amb.siz=this.steps[4].p*.6},
+ steps:[{t:'Ekmeğe tereyağı sür',h:'Ekmeğin üstünde sürükle',m:'d',k:1.3,v:()=>['bandpass',2000,.9,.14],f:p=>bt.material.opacity=.85*p},
+ {t:'Kaşarı diz',h:'Basılı tut',m:'h',k:1.4,v:()=>['lowpass',900,1,.05],f:p=>setN(ch,p,plc)},
+ {t:'Sucuğu diz',h:'Basılı tut',m:'h',k:1.6,v:()=>['lowpass',900,1,.05],f:p=>setN(su,p,plc)},
+ {t:'Üst ekmeği kapat',h:'Basılı tut',m:'h',k:1,f:p=>{top.visible=p>0;top.position.y=2-1.04*Math.pow(p,.7)}},
+ {t:'Kolu aşağı indir',h:'Yukarıdan aşağı sürükle; ızgara izleri oluşur',m:'d',k:1.1,dir:1,f(p,dp,sp,r){pv.rotation.x=1-p;pv.position.y=1.03-.06*p;top.position.y=.96-.05*p;top.scale.y=1-.25*p;b1.scale.y=1-.18*p;dr(p);if(p>.9&&!cl){cl=1;prs()}if(p<.1)cl=0}}]}});
+/* 3 ÇORBA */
+mkSt('Çorba',g=>{
+ const lv=[],pots=[[-2.1,0xe09a2a],[-.3,0xc2491a]];
+ pots.forEach(([x,c])=>{mk(CY(.85,.85,1.4,32,true),ps,x,.9,-1.3,g);mk(CY(.85,.85,.05,32),steel,x,.22,-1.3,g);mk(new T.TorusGeometry(.85,.05,8,32),steel,x,1.6,-1.3,g).rotation.x=Math.PI/2;mk(CY(.82,.82,.04,32),mat(c,.2),x,1.45,-1.3,g);mk(CY(.9,1,.2,32),dark,x,.1,-1.3,g);steam(g,x,1.6,-1.3,14)});
+ mk(new T.LatheGeometry([[.01,0],[.45,0],[.6,.08],[.88,.4],[.95,.5]].map(a=>new T.Vector2(a[0],a[1])),36),mat(0xf2ead8,.25,0,{side:T.DoubleSide}),1.9,.06,.6,g);
+ const lq=mk(CY(.8,.8,.02,28),mat(0xe09a2a,.2),1.9,.1,.6,g);lq.visible=false;
+ const fl=[];for(let i=0;i<36;i++){const r=Math.sqrt(Math.random())*.7,a=Math.random()*6.28,m=mk(CY(.03,.03,.01,6),mat(0xc42b10,.5),1.9+r*Math.cos(a),.45,.6+r*Math.sin(a),g);m.visible=false;fl.push(m)}
+ const lem=mk(SP(.28,16),mat(0xf4d03a,.5),1.9,1.3,.6,g);lem.scale.y=.75;lem.visible=false;
+ const str=mk(CY(.05,.05,1,8),mat(0xe09a2a,.2),1.9,1.2,.6,g);str.visible=false;let sq=0;
+ return{u(dt,act){const s=ST[2],lvl=s.steps[1].p;str.visible=act&&s.i==1&&!s.done;const top=.1+.34*lvl;str.scale.y=2.2-top;str.position.y=(2.2+top)/2;LF.visible=(s.i==0&&s.steps[0].p>.3)||(s.i==1&&lvl<.2);if(Math.random()<dt*6)bub()},
+ steps:[{t:'Kepçeyle çorbayı al',h:'Basılı tut',m:'h',k:1.3,v:()=>['lowpass',350,1,.07+.05*Math.sin(performance.now()/60)],f(){}},
+ {t:'Kaseye dök',h:'Basılı tut; kap doldukça ses incelir',m:'h',k:3.2,v:p=>['bandpass',500+p*2200,3,.18*(.8+.2*Math.sin(performance.now()/30))],f:p=>{lq.visible=p>0;lq.position.y=.1+.34*p}},
+ {t:'Tereyağlı pul biber gezdir',h:'Kasenin üstünde sürükle',m:'d',k:1.2,v:()=>['highpass',6500,.8,.04],f:p=>setN(fl,p,spr)},
+ {t:'Limon sık',h:'Basılı tut',m:'h',k:1.2,v:()=>['bandpass',2500,2,.04],f(p,dp,sp,r){lem.visible=!r;lem.scale.set(1+.25*p,.75-.3*p,1+.25*p);if(p>0&&!sq){sq=1;sqz()}if(!p)sq=0}}]}});
+/* 4 PİLAV */
+mkSt('Pilav',g=>{
+ mk(CY(1.4,1.25,.4,40),mat(0xb8733a,.3,.9),-1.5,.25,-.9,g);mk(CY(1.3,1.3,.08,40),mat(0xf0e2bd,.7),-1.5,.46,-.9,g);
+ const cp=mat(0xd4aa5e,.6);for(let i=0;i<40;i++){const r=Math.sqrt(Math.random())*1.15,a=Math.random()*6.28;mk(SP(.07),cp,-1.5+r*Math.cos(a),.54,-.9+r*Math.sin(a),g)}
+ steam(g,-1.5,.7,-.9,16);mk(CY(1.15,1,.08,40),mat(0xf4f0ea,.3),1.9,.04,.7,g);
+ const dome=mk(new T.SphereGeometry(.85,28,14,0,6.283,0,1.5708),mat(0xf3e9cc,.7),1.9,.08,.7,g);dome.visible=false;
+ const sc2=(n,geo,m,off)=>{const a=[];for(let i=0;i<n;i++){const r=Math.sqrt(Math.random())*.72,an=Math.random()*6.28,o=mk(geo,m,1.9+r*Math.cos(an),.08+.51*Math.sqrt(Math.max(0,1-(r/.85)**2))+off,.7+r*Math.sin(an),g);o.rotation.y=Math.random()*3;o.visible=false;a.push(o)}return a};
+ const nh=sc2(26,SP(.08),mat(0xd9b26a,.6),.04),ck=sc2(10,BX(.34,.08,.12),mat(0xf2d9b3,.7),.07),pp=sc2(70,SP(.016,6),mat(0x111111,.9),.08);
+ return{steps:[{t:'Pilavı tabağa kubbele',h:'Basılı tut',m:'h',k:1.5,v:()=>['lowpass',900,1,.08],f:p=>{dome.visible=p>0;const s=Math.max(.01,p);dome.scale.set(s,.6*s,s)}},
+ {t:'Nohut ekle',h:'Basılı tut',m:'h',k:1.2,v:()=>['lowpass',900,1,.04],f:p=>setN(nh,p,plc)},
+ {t:'Ditilmiş tavuk ekle',h:'Basılı tut',m:'h',k:1.2,v:()=>['lowpass',900,1,.04],f:p=>setN(ck,p,plc)},
+ {t:'Karabiber serp',h:'Tabağın üstünde sürükle',m:'d',k:1,v:()=>['highpass',7000,.8,.04],f:p=>setN(pp,p,spr)}]}});
+/* 5 İÇECEK */
+mkSt('İçecek',g=>{
+ mk(BX(4.2,3,.2),mat(0x20262c,.5,.6),0,1.6,-2.7,g);
+ for(let i=0;i<3;i++){mk(BX(4,.05,1),steel,0,.8+i*.9,-2.2,g);for(let j=0;j<4;j++)mk(CY(.2,.2,.7,16),mat([0xf4f0e6,0x6b1d4f,0x7fc4e6][(i+j)%3],.3),-1.4+j*.9,1.2+i*.9,-2.2,g)}
+ const L=new T.PointLight(0xbfe6ff,.9,6);L.position.set(0,2,-1.6);g.add(L);
+ const gl=[[-.5,0xf4f0e6,1],[1.2,0x7a1a58,0]].map(([x,c,f])=>{mk(CY(.45,.38,1.1,24,true),mat(0xcfe8f5,.05,0,{transparent:true,opacity:.28,side:T.DoubleSide}),x,.6,.6,g);const liq=mk(CY(.4,.35,1,24),mat(c,.15),x,.06,.6,g);liq.visible=false;let foam=null;if(f){foam=mk(CY(.41,.41,.18,24),mat(0xfffaf0,.9),x,.6,.6,g);foam.visible=false}return{x,liq,foam,c}});
+ const bot=mk(CY(.32,.32,1.2,20),mat(0xf4f0e6,.3),0,3.1,.6,g),str=mk(CY(.05,.05,1,8),mat(0xf4f0e6,.2),0,2,.6,g);str.visible=false;
+ function pour(i,p){const o=gl[i];o.liq.visible=p>0;o.liq.scale.y=Math.max(.001,.95*p);o.liq.position.y=.06+.475*p;if(o.foam){o.foam.visible=p>.05;const hf=.04+.14*p;o.foam.scale.y=hf/.18;o.foam.position.y=.06+.95*p+hf/2}}
+ const vf=p=>['bandpass',500+p*2400,3,.18*(.8+.2*Math.sin(performance.now()/28))];
+ return{u(dt,act){const s=ST[4],i=Math.min(s.i,1),o=gl[i],p=s.steps[i].p;bot.visible=!s.done;bot.position.set(o.x+.9,3.1,.6);bot.rotation.z=1.9;bot.material.color.set(o.c);str.material.color.set(o.c);str.visible=act&&!s.done;const top=.06+.95*p;str.position.set(o.x,(2.9+top)/2,.6);str.scale.y=2.9-top},
+ steps:[{t:'Yayık ayranı dök',h:'Basılı tut; köpük yükselir',m:'h',k:3.2,v:vf,f:p=>pour(0,p)},{t:'Şalgamı doldur',h:'Basılı tut',m:'h',k:3.2,v:vf,f:p=>pour(1,p)}]}});
+/* ---------- VR layer: hands, HUD, locomotion, customers ---------- */
+let cur=0,lock=0,mode=0,t0=performance.now(),fr=0,lH=0,pk=0,sn=0,mx=0,my=0,nxt=2;
+const V3=new T.Vector3(),V4=new T.Vector3(),CP=new T.Vector3(),keys={},hands=[],clp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hap=(v,ms,h)=>(h?[h]:hands).forEach(q=>{const a=q.gp&&q.gp.hapticActuators;if(a&&a[0])try{a[0].pulse(v,ms)}catch(e){}});
+function mkGlove(){const g=new T.Group();mk(SP(.07,12),glove,0,0,0,g).scale.set(1,.8,1.2);for(let i=0;i<4;i++)mk(CY(.015,.014,.08,8),glove,-.035+i*.024,.008,-.07,g).rotation.x=Math.PI/2.4;return g}
+function mkHand(i){const v=i>1,c=v?new T.Group():R.xr.getController(i),h={c,trig:0,lp:new T.Vector3(),dl:new T.Vector3(),pos:new T.Vector3(),gp:null,hd:''};c.add(mkGlove());rig.add(c);
+ if(!v){c.addEventListener('selectstart',()=>{h.trig=1;lock=0});c.addEventListener('selectend',()=>h.trig=0);
+  c.addEventListener('connected',e=>{h.gp=e.data.gamepad;h.hd=e.data.handedness;if(h.hd=='right'||(!h.hd&&i==1))tools.forEach(t=>t&&c.add(t))})}
+ hands.push(h)}
+[0,1,2].forEach(mkHand);
+/* HUD canvases */
+const rr=(g,x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.fill()};
+function lab(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return{t,draw:(...a)=>{g.clearRect(0,0,w,h);draw(g,w,h,...a);t.needsUpdate=true}}}
+function sprite(draw,w,h,sw,sh){const L=lab(w,h,draw);L.draw();const q=new T.Sprite(new T.SpriteMaterial({map:L.t}));q.scale.set(sw,sh,1);return q}
+const pan=[],btn=[];
+ST.forEach((s,i)=>{const L=lab(640,176,(g,w,h,tx,hn,pr)=>{g.fillStyle='rgba(28,16,9,.88)';rr(g,0,0,w,h,26);g.fillStyle='#f6e7d0';g.font='bold 31px system-ui';g.fillText(tx,26,58);g.fillStyle='#d9c3a5';g.font='23px system-ui';g.fillText(hn,26,98);g.fillStyle='#0008';g.fillRect(26,128,w-52,14);g.fillStyle='#ff9a3c';g.fillRect(26,128,(w-52)*pr,14)});
+ const p=mk(new T.PlaneGeometry(4.2,1.15),new T.MeshBasicMaterial({map:L.t,transparent:true}),0,4.6,-1,s.g);p.castShadow=false;p.userData={L,k:''};pan.push(p);
+ const b=mk(CY(.55,.6,.24,24),mat(0x555555,.4),0,.12,2,s.g);btn.push(b);
+ const L2=lab(256,128,(g,w)=>{g.fillStyle='#fff';g.font='bold 54px system-ui';g.textAlign='center';g.fillText('SERVİS',w/2,80)});L2.draw();
+ const l=mk(new T.PlaneGeometry(1,.5),new T.MeshBasicMaterial({map:L2.t,transparent:true}),0,.26,0,b);l.rotation.x=-Math.PI/2;l.castShadow=false});
+function ui(){ST.forEach((s,i)=>{const x=s.steps[s.i],tx=s.done?'Hazır! Servis düğmesine dokun':x.t,hn=s.done?'Müşteri bekliyor':'Tetik: '+(x.h||''),pr=s.steps.reduce((a,y)=>a+y.p,0)/s.steps.length,k=tx+hn+Math.round(pr*40),p=pan[i];if(p.userData.k!=k){p.userData.k=k;p.userData.L.draw(tx,hn,pr)}btn[i].material.color.set(s.done?0x3fbf5a:0x555555);btn[i].material.emissive.set(s.done?0x1f7a35:0)})}
+/* customers (NPC state machine: 0 walk in, 1 order+wait, 3 eat, 4 leave) */
+const MENU=['Yarım ekmek döner, bol et olsun!','Çift kaşarlı tost lütfen!','Bol acılı mercimek çorbası!','Nohutlu tavuklu pilav, karabiberli!','Yayık ayran, köpüklü olsun!'],HI=['Kolay gelsin usta!','Selamlar usta!','Eline sağlık usta!'],busy=[],cust=[],coins=[],cm=mat(0xffc13a,.25,.9);
+const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='tr-TR';u.pitch=.7+Math.random()*.7;speechSynthesis.speak(u)}catch(e){}};
+const crunch=()=>{burst('highpass',2500,.8,.35,.05);burst('bandpass',900,4,.25,.09);tone(180,.1,.06,'triangle',90)};
+function bubble(txt){const w=txt.split(' '),m=Math.ceil(w.length/2),l=[w.slice(0,m).join(' '),w.slice(m).join(' ')];return sprite((g,W,H)=>{g.fillStyle='#fffaf0';rr(g,0,0,W,H,34);g.fillStyle='#2a1708';g.font='bold 38px system-ui';g.textAlign='center';g.fillText(l[0],W/2,78);g.fillText(l[1],W/2,138)},640,190,4.4,1.3)}
+function person(){const g=new T.Group(),sk=[0xf1c9a5,0xd9a47c,0xa86f47,0x7b4a2a][Math.floor(Math.random()*4)],sh=mat(new T.Color().setHSL(Math.random(),.5,.45),.8),lm=mat(0x23262b,.8),sm=mat(sk,.7);
+ g.legs=[-.22,.22].map(x=>{const l=new T.Group();l.position.set(x,1.7,0);mk(CY(.17,.15,1.7,10),lm,0,-.85,0,l);g.add(l);return l});
+ mk(CY(.5,.42,1.4,14),sh,0,2.4,0,g);mk(SP(.38,14),sm,0,3.4,0,g);mk(new T.SphereGeometry(.4,14,8,0,6.283,0,1.4),mat(0x2b1a10,.9),0,3.45,-.03,g);
+ [-.14,.14].forEach(x=>mk(SP(.05,6),mat(0x111111),x,3.42,.34,g));
+ g.arms=[-.62,.62].map(x=>{const a=new T.Group();a.position.set(x,2.95,0);mk(CY(.13,.11,1.2,8),sh,0,-.55,0,a);g.add(a);return a});return g}
+function spawn(){const f=[0,1,2,3,4].filter(i=>!busy[i]);if(!f.length||cust.length>=3)return;const i=f[Math.floor(Math.random()*f.length)],g=person(),d=Math.random()<.5?-1:1;busy[i]=1;g.position.set(d<0?-14:46,-1.98,-6.5);S.add(g);cust.push({g,i,s:0,t:0,d,tx:ST[i].g.position.x+4.1,b:null,e:null})}
+function updC(dt){cust.slice().forEach(c=>{const g=c.g;c.t+=dt;
+ const sw=a=>{g.legs[0].rotation.x=Math.sin(c.t*8)*a;g.legs[1].rotation.x=-Math.sin(c.t*8)*a;g.arms[0].rotation.x=-Math.sin(c.t*8)*a;g.arms[1].rotation.x=Math.sin(c.t*8)*a},
+ go=(x,z,v)=>{const dx=x-g.position.x,dz=z-g.position.z,L=Math.hypot(dx,dz);if(L<.15)return 1;g.position.x+=dx/L*v*dt;g.position.z+=dz/L*v*dt;g.rotation.y=Math.atan2(dx,dz);sw(.6);return 0};
+ if(c.s==0){if(go(c.tx,-3.4,3.2)){c.s=1;c.t=0;g.rotation.y=0;sw(0);c.b=bubble(MENU[c.i]);c.b.position.y=4.7;g.add(c.b);say(HI[Math.floor(Math.random()*3)]+' '+MENU[c.i])}}
+ else if(c.s==1){g.rotation.y=Math.sin(c.t*.7)*.35;g.arms[1].rotation.x=Math.sin(c.t*2)*.08;if(Math.random()<dt*.15)tone(1400,.04,.35,'sine',1000)}
+ else if(c.s==3){g.rotation.y=0;g.arms[1].rotation.x=-1.2+Math.sin(c.t*10)*.2;if(c.t>2.8){c.s=4;c.t=0;g.remove(c.e);g.arms[1].rotation.x=0}}
+ else if(c.s==4){g.arms[1].rotation.z=c.t<.9?2.4+Math.sin(c.t*14)*.3:0;if(go(c.d<0?48:-16,-6.5,3.2)){S.remove(g);busy[c.i]=0;cust.splice(cust.indexOf(c),1)}}})}
+function serve(i){const s=ST[i];if(!s.done)return;chime();hap(1,120);const c=cust.find(c=>c.i==i&&c.s==1);
+ if(c){c.s=3;c.t=0;c.g.remove(c.b);c.e=sprite((g,W)=>{g.font='96px serif';g.textAlign='center';g.fillText('😍',W/2,100)},128,128,1.4,1.4);c.e.position.y=4.5;c.g.add(c.e);
+  for(let k=0;k<5;k++)setTimeout(crunch,500+k*300);
+  for(let k=0;k<4;k++){const m=mk(CY(.14,.14,.03,16),cm,c.g.position.x+(Math.random()-.5)*.8,2.2+k*.3,-1.9+(Math.random()-.5)*.4);m.v=0;coins.push(m);if(coins.length>24)S.remove(coins.shift())}}
+ s.reset()}
+/* locomotion: left stick walk, right stick snap-turn */
+function loco(dt){let f=0,st=0,tu=0;hands.forEach(h=>{const a=h.gp&&h.gp.axes;if(!a)return;if(h.hd=='left'){st=a[2]||0;f=-(a[3]||0)}else tu=a[2]||0});
+ if(mode==2){f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);st=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)}
+ if(Math.abs(f)<.15)f=0;if(Math.abs(st)<.15)st=0;
+ if(f||st){C.getWorldDirection(V3);V3.y=0;V3.normalize();rig.position.x+=(V3.x*f-V3.z*st)*3.4*dt;rig.position.z+=(V3.z*f+V3.x*st)*3.4*dt}
+ if(Math.abs(tu)>.7){if(!sn){sn=1;C.getWorldPosition(V3);rig.rotation.y-=Math.sign(tu)*Math.PI/6;rig.updateMatrixWorld(true);C.getWorldPosition(V4);rig.position.x+=V3.x-V4.x;rig.position.z+=V3.z-V4.z}}else sn=0;
+ rig.position.x=clp(rig.position.x,-6,ST.length*8-2);rig.position.z=clp(rig.position.z,3.2,7.5)}
+/* main loop */
+function tick(now){const dt=Math.min((now-t0)/1000,.05);t0=now;
+ C.getWorldPosition(CP);cur=clp(Math.round(CP.x/8),0,4);
+ const vh=hands[2];vh.c.visible=mode==2;if(mode==2)vh.c.position.set(mx*1.1,1.15+my*.4,-.55);else vh.trig=0;
+ hands.forEach(h=>{h.c.getWorldPosition(h.pos);h.dl.copy(h.c.position).sub(h.lp).multiplyScalar(2.2);h.lp.copy(h.c.position)});
+ loco(dt);
+ const s=ST[cur],x=s.steps[s.i];let act=false,ah=null;
+ if(!s.done&&!lock){ah=hands.find(h=>h.trig&&h.c.visible&&Math.abs(h.pos.x-s.g.position.x)<3.4&&h.pos.y>-.3);
+  if(ah){if(x.m=='h'){x.p=Math.min(1,x.p+dt/x.k);x.f(x.p,dt/x.k,0);act=true}
+   else{const dist=x.dir?Math.max(-ah.dl.y,0):ah.dl.length(),d=dist/1.6;if(d>.0006){const dp=d/x.k;x.p=Math.min(1,x.p+dp);x.f(x.p,dp,d/dt,0);act=true}}}}
+ if(!s.done&&x.p>=1&&!x.d){x.d=1;lock=1;ding();hap(.8,100,ah);if(s.i<s.steps.length-1)s.i++;else s.done=1}
+ if(act&&ah&&now-lH>90){lH=now;hap(.2,35,ah)}
+ if(A){const v=act&&x.v?x.v(x.p):null;if(v){hv.fl.type=v[0];hv.fl.frequency.setTargetAtTime(v[1],A.currentTime,.05);hv.fl.Q.value=v[2]}
+  hv.g.gain.setTargetAtTime(v?v[3]:0,A.currentTime,.04);sz.g.gain.setTargetAtTime(amb.siz*.1,A.currentTime,.2);if(Math.random()<dt*amb.siz*40)burst('highpass',6000,1,.12*amb.siz,.015)}
+ amb.siz=0;ST.forEach((q,i)=>q.u(dt,i==cur&&act));
+ stm.forEach(p=>{const d=p.userData,a=p.geometry.attributes.position;for(let i=0;i<d.n;i++){const ph=(i/d.n+now*.00012)%1;a.setXYZ(i,d.x+Math.sin(ph*6+i)*.25*ph,d.y+ph*1.8,d.z+Math.cos(i)*.2)}a.needsUpdate=true});
+ tools.forEach((t,i)=>t&&(t.visible=i==cur));
+ btn.forEach((b,i)=>{if(!ST[i].done||now-pk<800)return;b.getWorldPosition(V4);V4.y+=.3;hands.forEach(h=>{if(h.c.visible&&h.pos.distanceTo(V4)<.8){pk=now;serve(i)}})});
+ nxt-=dt;if(nxt<=0){spawn();nxt=6+Math.random()*6}updC(dt);
+ coins.forEach(m=>{if(m.v!=null){m.v-=14*dt;m.position.y+=m.v*dt;if(m.position.y<=.03){m.position.y=.03;m.v=null;tone(2600+Math.random()*600,.05,.2,'sine',1900)}}});
+ pan.forEach(p=>{p.getWorldPosition(V4);p.rotation.y=Math.atan2(CP.x-V4.x,CP.z-V4.z)});
+ sp.position.set(CP.x,9,5);sp.target.position.set(CP.x,0,0);
+ if(fr++%6==0)ui();R.render(S,C)}
+/* start buttons, input fallback */
+const go=()=>{if(!A)ai()};
+if(navigator.xr)navigator.xr.isSessionSupported('immersive-vr').then(ok=>{$('#vr').disabled=!ok;if(!ok)$('#mp').textContent='Bu cihazda VR bulunamadı. Meta Quest Tarayıcı ile aç ya da masaüstü önizlemeyi dene.'});else $('#mp').textContent='WebXR için sayfa HTTPS üzerinden açılmalı (GitHub Pages uygundur). Önizleme için masaüstü modunu kullanabilirsin.';
+$('#vr').onclick=async()=>{go();try{const se=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});R.xr.setSession(se);mode=1;$('#m').style.display='none';se.addEventListener('end',()=>{mode=0;$('#m').style.display='flex'})}catch(e){$('#mp').textContent='VR başlatılamadı: '+e.message}};
+$('#dk').onclick=()=>{go();mode=2;$('#m').style.display='none';tools.forEach(t=>t&&hands[2].c.add(t));C.rotation.x=-.3};
+addEventListener('pointermove',e=>{mx=e.clientX/innerWidth*2-1;my=-(e.clientY/innerHeight*2-1)});
+addEventListener('pointerdown',()=>{if(mode==2){hands[2].trig=1;lock=0}});addEventListener('pointerup',()=>hands[2].trig=0);
+addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
+R.setAnimationLoop(tick);
+</script></body></html>
